@@ -1,0 +1,77 @@
+Ubuntu OS Hardening and Image Preparation Guide (AWS EC2)
+
+
+1. Launch EC2 Instance
+Go to EC2 - Instances - Launch Instance
+select 	Ubuntu 22.04 TS (HVM), SSD Volume Type., x86_64 or  Ubuntu 20.04 / 22.04 / 24.04 on ASecurity Baselines including CIS , AIDE
+
+Configure:
+
+VPC: Use production or test VPC.
+
+Subnet: Prefer private subnet for hardening tasks.
+
+IAM Role: Attach a role with least privileges.
+
+Key Pair: Select an SSH key pair for secure login.
+
+Security Group: Allow only required ports (e.g., 22, 80, 443)
+
+After launching EC2 Ubuntu Server and connect it using SSH
+To check whether pro is activated or not run command:
+#sudo pro status --wait
+
+If Ubuntu Pro is not enabled:
+#sudo pro attach <token>
+
+If it’s already active, you’ll see:
+\SERVICE       STATUS
+cis           disabled
+fips          disabled
+esm-infra     enabled
+esm-apps      enabled
+
+----------------------------------------------
+
+Enable Ubuntu Security Guide (USG) 
+#sudo apt install usg –y
+
+
+Enable CIS Benchmark Audit
+#sudo usg --list-profiles
+
+Run hardening:
+sudo usg fix cis_server_l1
+
+This command automatically applies security configurations based on CIS Level 1 Benchmark.
+Once complete, usg starts auditing and enforcing compliance rules.
+
+----------------------------------------------
+
+Verify Audit and Compliance
+You can verify:
+#sudo usg audit cis_server_l1
+
+It will show which security settings are compliant and which need attention.
+
+Clean the Image Before Creating AMI
+This removes metadata and resets the system’s unique identifiers.
+
+#sudo cloud-init clean –machine-id
+
+---------------------------------------------
+Now go back to the console
+Verify AMI
+
+Go to EC2 - AMIs.
+
+Wait until your AMI status changes to “available”.
+
+Note the AMI ID — you can now use it for launching new, hardened Ubuntu EC2 servers. 
+Click on action nd create Imag eand templates
+Caret image name
+Now chevk on AMIs 
+Now launch instance 
+
+  
+

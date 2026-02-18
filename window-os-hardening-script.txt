@@ -1,0 +1,119 @@
+# ======================================================================
+# AWS Windows OS Hardening Script - Clean Version (No Red Errors)
+# Author: Preeti | Verified by GPT-5
+# ======================================================================
+
+Write-Host "🚀 Starting Windows OS Hardening for AWS..."
+
+# ----------------------------------------------------------------------
+# 1. Disable SMBv1
+# ----------------------------------------------------------------------
+Write-Host "[1/15] Disabling SMBv1..."
+Set-SmbServerConfiguration -EnableSMB1Protocol $false -Force
+
+# ----------------------------------------------------------------------
+# 2. Disable NTLMv1
+# ----------------------------------------------------------------------
+Write-Host "[2/15] Disabling NTLMv1..."
+New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Lsa" -Name "LmCompatibilityLevel" -Value 5 -PropertyType DWord -Force | Out-Null
+
+# ----------------------------------------------------------------------
+# 3. Configure Password Policies
+# ----------------------------------------------------------------------
+Write-Host "[3/15] Configuring Password Policies..."
+secedit /export /cfg C:\tempsecpol.cfg
+
+(gc C:\tempsecpol.cfg) -replace "MinimumPasswordLength = 0", "MinimumPasswordLength = 12" |
+    Set-Content C:\tempsecpol.cfg
+
+(gc C:\tempsecpol.cfg) -replace "PasswordComplexity = 0", "PasswordComplexity = 1" |
+    Set-Content C:\tempsecpol.cfg
+
+secedit /configure /db secedit.sdb /cfg C:\tempsecpol.cfg /areas SECURITYPOLICY
+Remove-Item C:\tempsecpol.cfg -Force
+
+# ----------------------------------------------------------------------
+# 4. Enable Windows Firewall
+# ----------------------------------------------------------------------
+Write-Host "[4/15] Enabling Windows Firewall..."
+Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled True
+
+# ----------------------------------------------------------------------
+# 5. Disable Remote Assistance
+# ----------------------------------------------------------------------
+Write-Host "[5/15] Disabling Remote Assistance..."
+if (-not (Test-Path "HKLM:\SYSTEM\CurrentControlSet\Control\Remote Assistance")) {
+    New-Item -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Remote Assistance" | Out-Null
+}
+Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Remote Assistance" -Name "fAllowToGetHelp" -Value 0
+
+# ----------------------------------------------------------------------
+# 6. Enable Audit Policies
+# ----------------------------------------------------------------------
+Write-Host "[6/15] Enabling Audit Policies..."
+auditpol /set /category:* /success:enable /failure:enable
+
+# ----------------------------------------------------------------------
+# 7. Enable Windows Defender
+# ----------------------------------------------------------------------
+Write-Host "[7/15] Enabling Windows Defender..."
+Set-MpPreference -DisableRealtimeMonitoring $false
+
+# ----------------------------------------------------------------------
+# 8. Enable Defender Cloud Protection
+# ----------------------------------------------------------------------
+Write-Host "[8/15] Enabling Defender Cloud Protection..."
+Set-MpPreference -MAPSReporting Advanced
+Set-MpPreference -SubmitSamplesConsent SendSafeSamples
+
+# ----------------------------------------------------------------------
+# 9. Configure Defender Logging
+# ----------------------------------------------------------------------
+Write-Host "[9/15] Enabling Windows Defender Logging..."
+wevtutil sl "Microsoft-Windows-Windows Defender/Operational" /e:true
+
+# ----------------------------------------------------------------------
+# 10. Enable NTP Time Sync (AWS recommended)
+# ----------------------------------------------------------------------
+Write-Host "[10/15] Enabling NTP time sync..."
+w32tm /config /manualpeerlist:"0.amazon.pool.ntp.org,1.amazon.pool.ntp.org" /syncfromflags:manual /reliable:yes /update
+w32tm /resync
+
+# ----------------------------------------------------------------------
+# 11. Install AWS SSM Agent (if missing)
+# ----------------------------------------------------------------------
+Write-Host "[11/15] Installing AWS SSM Agent (if not present)..."
+$ssmPath = "C:\Program Files\Amazon\SSM\amazon-ssm-agent.exe"
+if (!(Test-Path $ssmPath)) {
+    Invoke-WebRequest https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/Windows_AMD64/AmazonSSMAgentSetup.exe -OutFile "C:\SSMAgentSetup.exe"
+    Start-Process "C:\SSMAgentSetup.exe" -ArgumentList "/quiet" -Wait
+    Remove-Item "C:\SSMAgentSetup.exe" -Force
+}
+
+# ----------------------------------------------------------------------
+# 12. Install CloudWatch Agent
+# ----------------------------------------------------------------------
+Write-Host "[12/15] Installing CloudWatch Agent..."
+Invoke-WebRequest https://s3.amazonaws.com/amazoncloudwatch-agent/windows/amd64/latest/AmazonCloudWatchAgent.zip -OutFile "C:\AmazonCloudWatchAgent.zip"
+Expand-Archive -LiteralPath "C:\AmazonCloudWatchAgent.zip" -DestinationPath "C:\Program Files\Amazon\AmazonCloudWatchAgent" -Force
+Remove-Item "C:\AmazonCloudWatchAgent.zip" -Force
+
+# ----------------------------------------------------------------------
+# 13. Cleanup Logs and Temporary Files
+# ----------------------------------------------------------------------
+Write-Host "[13/15] Cleaning up old logs..."
+wevtutil cl "Microsoft-Windows-Windows Defender/Operational" 2>$null
+wevtutil cl "Microsoft-Windows-Windows Defender/WHC" 2>$null
+
+# ----------------------------------------------------------------------
+# 14. Disable Guest Account
+# ----------------------------------------------------------------------
+Write-Host "[14/15] Disabling Guest account..."
+net user guest /active:no
+
+# ----------------------------------------------------------------------
+# 15. Final Confirmation
+# ----------------------------------------------------------------------
+Write-Host "✅ Windows Hardening Completed Successfully!"
+Write-Host "💡 If you plan to create a hardened AMI, run this next:"
+Write-Host "   sysprep /generalize /oobe /shutdown /mode:vm"

@@ -1,0 +1,337 @@
+ip 102.30.20.150
+
+I will create a COMPLETE RUNBOOK for everything you did:
+
+✔ IIS installation
+✔ PHP installation
+✔ FastCGI
+✔ php.ini setup
+✔ MySQL installation
+✔ Database + User
+✔ PHP → MySQL connection
+✔ Simple input app
+✔ Database-driven app
+✔ Troubleshooting section for every possible error
+
+Exactly like a professional documentation / SOP that any new engineer can follow.
+
+This will be extremely helpful for your TL and future team members.
+
+📘 RUNBOOK: Deploying PHP + MySQL Web Application on Windows Server (IIS)
+📝 With full troubleshooting + remedies
+
+(You can paste this into Word/PDF)
+
+------------------------------------------
+1. Windows Server Setup
+------------------------------------------
+1.1 Install IIS
+
+Open Server Manager → Add Roles and Features
+
+Select:
+
+Web Server (IIS)
+
+Under Web Server → Application Development check:
+
+CGI (VERY IMPORTANT)
+
+Install.
+
+Troubleshooting
+Problem	Cause	Fix
+FastCgiModule not visible	CGI not installed	Enable CGI under IIS roles
+------------------------------------------
+2. PHP Installation on IIS
+------------------------------------------
+2.1 Download PHP
+
+From:
+https://windows.php.net/download/
+
+Download:
+
+php-8.x.x-nts-Win32-vs16-x64.zip
+
+2.2 Create PHP directory
+C:\php
+
+2.3 Extract all files to:
+C:\php
+
+2.4 Create the REAL php.ini
+
+Copy:
+
+php.ini-development
+
+
+Paste → Rename to:
+
+php.ini
+
+2.5 Edit php.ini
+
+Open:
+
+C:\php\php.ini
+
+Enable required extensions
+
+Find and enable:
+
+extension_dir = "C:\php\ext"
+extension=mysqli
+extension=pdo_mysql
+
+Troubleshooting
+Error	Reason	Fix
+phpinfo() shows blank/500	Missing VC++ 2015–2022	Install VC_redist.x64.exe
+mysqli_connect() undefined	mysqli extension disabled	Enable extension=mysqli + correct extension_dir
+php.ini not applying	Wrong file edited	Ensure you're editing C:\php\php.ini
+------------------------------------------
+3. Configure IIS for PHP
+------------------------------------------
+3.1 Open IIS Manager
+
+Start → IIS
+
+3.2 Add Module Mapping
+
+Handler Mappings → Add Module Mapping:
+
+Field	Value
+Request Path	*.php
+Module	FastCgiModule
+Executable	C:\php\php-cgi.exe
+Name	PHP_via_FastCGI
+
+Click OK → Yes
+
+3.3 Set FastCGI Settings
+
+FastCGI Settings → double-click php-cgi.exe → Add:
+
+Name	Value
+PHPRC	C:\php
+Restart IIS
+iisreset
+
+Troubleshooting
+Problem	Cause	Fix
+404 on PHP file	Handler not added	Add *.php mapping
+php-cgi.exe not visible	File filter DLL only	Change filter to “All files”
+------------------------------------------
+4. Test PHP
+------------------------------------------
+
+Create:
+
+C:\inetpub\wwwroot\info.php
+
+
+Content:
+
+<?php phpinfo(); ?>
+
+
+Visit:
+
+http://<server-ip>/info.php
+
+
+Expected: PHP info screen.
+
+------------------------------------------
+5. Install MySQL
+------------------------------------------
+5.1 Download full installer
+mysql-installer-community-8.x.x.msi
+
+5.2 Select "Server Only"
+5.3 Configure
+
+Port: 3306
+
+Root password: Pass@123
+
+Troubleshooting
+Problem	Reason	Fix
+MySQL won't start	Port busy	Change port
+Workbench cannot connect	Firewall	Allow port 3306
+------------------------------------------
+6. Create Database + User
+------------------------------------------
+Run in MySQL:
+CREATE DATABASE webdb;
+
+CREATE USER 'webuser'@'%' IDENTIFIED BY 'Pass@123';
+
+GRANT ALL PRIVILEGES ON webdb.* TO 'webuser'@'%';
+
+FLUSH PRIVILEGES;
+
+------------------------------------------
+7. Create PHP → MySQL Connectivity Test
+------------------------------------------
+
+Create:
+
+dbtest.php
+
+
+Paste:
+
+<?php
+$conn = mysqli_connect("localhost", "webuser", "Pass@123", "webdb");
+
+if (!$conn) {
+    die("Connection failed: " . mysqli_connect_error());
+}
+
+echo "Connected Successfully!";
+?>
+
+
+Visit:
+
+http://<server-ip>/dbtest.php
+
+------------------------------------------
+8. Simple Input Form (Basic App)
+------------------------------------------
+
+Create:
+
+form.php
+
+<form method="POST">
+    <input type="text" name="mytext">
+    <button>Submit</button>
+</form>
+
+<?php
+if($_POST){
+    echo "You entered: ".$_POST['mytext'];
+}
+?>
+
+------------------------------------------
+9. Full PHP + MySQL Application
+------------------------------------------
+
+Create:
+
+app.php
+
+
+Paste:
+
+<?php
+$conn=mysqli_connect("localhost","webuser","Pass@123","webdb");
+
+if($_SERVER["REQUEST_METHOD"]=="POST"){
+  $msg=$_POST["message"];
+  mysqli_query($conn,"INSERT INTO messages(user_input) VALUES('$msg')");
+}
+?>
+<form method="POST">
+<input type="text" name="message" required>
+<button>Save</button>
+</form>
+<hr>
+<h3>Saved Messages:</h3>
+<?php
+$result=mysqli_query($conn,"SELECT * FROM messages ORDER BY id DESC");
+while($row=mysqli_fetch_assoc($result)){
+ echo $row['id']." - ".$row['user_input']."<br>";
+}
+?>
+
+------------------------------------------
+10. FULL TROUBLESHOOTING GUIDE
+------------------------------------------
+PHP Errors
+Error	Fix
+500 Internal Error	Install VC++ redistributable
+Undefined function mysqli_connect	Enable mysqli ext + correct extension_dir
+404 Page Not Found	Wrong folder or wrong file name (must not end with .txt)
+PHP file downloads instead of executes	Missing FastCGI mapping
+MySQL Errors
+Error	Fix
+Can't connect	Wrong username/password
+Access denied	GRANT permissions again
+Connection timeout	Open port 3306 in firewall
+IIS Errors
+Error	Fix
+No FastCGI	Install CGI from Windows Features
+php-cgi.exe not found	Move PHP to C:\php
+🎉 RUNBOOK COMPLETE
+
+If your TL gives this to anyone, they can deploy the exact same environment without confusion.
+
+
+
+
+
+i have added this code into my app.php file and when i save this and restart my iis and when i type any input into my brower it will save the output automatically into dbserer a well a brower.l̥ tables and 
+
+
+<!DOCTYPE html>
+<html>
+<body>
+
+<h2>Enter Something (Saved to Database)</h2>
+
+<form method="POST">
+    <input type="text" name="message" placeholder="Type something..." required>
+    <button type="submit">Save</button>
+</form>
+
+<hr>
+
+<?php
+// CONNECT TO DATABASE
+$conn = mysqli_connect("localhost", "webuser", "Pass@123", "webdb");
+
+if (!$conn) {
+    die("Database Connection Failed: " . mysqli_connect_error());
+}
+
+// INSERT DATA
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $msg = $_POST["message"];
+    $msg = mysqli_real_escape_string($conn, $msg);
+
+    $insert = "INSERT INTO messages (user_input) VALUES ('$msg')";
+    
+    if (mysqli_query($conn, $insert)) {
+        echo "<p><b>Saved Successfully!</b></p>";
+    } else {
+        echo "Error: " . mysqli_error($conn);
+    }
+}
+
+// SHOW ALL DATA
+echo "<h3>Saved Messages:</h3>";
+
+$result = mysqli_query($conn, "SELECT * FROM messages ORDER BY id DESC");
+
+echo "<ul>";
+while ($row = mysqli_fetch_assoc($result)) {
+    echo "<li>" . $row['user_input'] . " (ID: " . $row['id'] . ")</li>";
+}
+echo "</ul>";
+
+mysqli_close($conn);
+?>
+
+</body>
+</html>
+
+
+
+
+
+
