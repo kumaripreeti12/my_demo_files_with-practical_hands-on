@@ -15,7 +15,7 @@ I will create a COMPLETE RUNBOOK for everything you did:
 
 Exactly like a professional documentation / SOP that any new engineer can follow.
 
-This will be extremely helpful for your TL and future team members.
+This will be extremely helpful for you and future team members.
 
 📘 RUNBOOK: Deploying PHP + MySQL Web Application on Windows Server (IIS)
 📝 With full troubleshooting + remedies
@@ -329,6 +329,7 @@ mysqli_close($conn);
 
 </body>
 </html>
+
 
 
 
